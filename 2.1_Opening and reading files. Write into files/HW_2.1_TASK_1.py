@@ -1,5 +1,3 @@
-from pprint import pprint
-
 # Должны получить следующее:
 """
 cook_book = {
