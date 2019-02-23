@@ -28,11 +28,11 @@ def main_input():
         dishes = list()
         for elem in dishes_list:
             dishes.append(elem.capitalize())
-            person_count = int(input('Введите количество человек: '))
+        person_count = int(input('Введите количество человек: '))
+        return get_shop_list_by_dishes(dishes, person_count)
     except:
         print('Что-то пошло не так, повторите ввод')
         main_input()
-    return get_shop_list_by_dishes(dishes, person_count)
 
 
 def get_shop_list_by_dishes(dishes, person_count):
