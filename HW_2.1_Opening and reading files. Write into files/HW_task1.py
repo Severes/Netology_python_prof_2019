@@ -1,5 +1,7 @@
-# Должны получить следующее:
+# В функции нет вывода, так как явызываю даннуюфункцию во второй задаче ДЗ
 """
+Должны получить следующее:
+
 cook_book = {
   'Омлет': [
     {'ingridient_name': 'Яйцо', 'quantity': 2, 'measure': 'шт.'},
@@ -46,4 +48,4 @@ def reading_recipe():
     return cook_book
 
 
-print(reading_recipe())
+reading_recipe()
