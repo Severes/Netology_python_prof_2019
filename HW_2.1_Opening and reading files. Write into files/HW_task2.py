@@ -22,12 +22,16 @@ get_shop_list_by_dishes(['Запеченный картофель', 'Омлет'
 
 
 def main_input():
-    dishes_input = input('Введите блюда через запятую-пробел (", "): ')
-    dishes_list = dishes_input.split(', ')
-    dishes = list()
-    for elem in dishes_list:
-        dishes.append(elem.capitalize())
-    person_count = int(input('Введите количество человек: '))
+    try:
+        dishes_input = input('Введите блюда через запятую-пробел (", "): ')
+        dishes_list = dishes_input.split(', ')
+        dishes = list()
+        for elem in dishes_list:
+            dishes.append(elem.capitalize())
+            person_count = int(input('Введите количество человек: '))
+    except:
+        print('Что-то пошло не так, повторите ввод')
+        main_input()
     return get_shop_list_by_dishes(dishes, person_count)
 
 
