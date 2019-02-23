@@ -43,8 +43,7 @@ def reading_recipe():
                         continue
                     else:
                         break
-    result = print(cook_book)
-    return result
+    return cook_book
 
 
-reading_recipe()
+print(reading_recipe())
