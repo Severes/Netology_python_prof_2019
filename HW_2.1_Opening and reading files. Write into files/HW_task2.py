@@ -30,7 +30,7 @@ def main_input():
             dishes.append(elem.capitalize())
         person_count = int(input('Введите количество человек: '))
         return get_shop_list_by_dishes(dishes, person_count)
-    except:
+    except ValueError:
         print('Что-то пошло не так, повторите ввод')
         main_input()
 
