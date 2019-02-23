@@ -1,1 +1,1 @@
-# Netology python profession 2019
+# Netology python 2019 (профессия)
