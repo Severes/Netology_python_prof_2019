@@ -31,4 +31,3 @@ class FileMerge:
 with FileMerge('list1.txt', 'list2.txt') as file_merge:
     print(file_merge.list3)
     print(file_merge.reverse())
-    1/0
