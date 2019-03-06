@@ -78,5 +78,3 @@ class User:
             result_get_mutual.append(User(friend_id))
         return result_get_mutual
 
-
-
