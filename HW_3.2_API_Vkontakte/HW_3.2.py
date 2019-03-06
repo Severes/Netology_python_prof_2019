@@ -79,6 +79,4 @@ class User:
         return result_get_mutual
 
 
-print(User(80619823))
 
-pprint(User(80619823) & User(11729201))
