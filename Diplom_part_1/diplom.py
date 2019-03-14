@@ -75,20 +75,29 @@ def check_for_friends_in_groups(ids):
     count = int()
     for group in group_list:
         for friend in friend_list:
-            params = get_params()
-            params['group_id'] = group
-            params['user_id'] = friend
-            response_friend_in_group = requests.get('https://api.vk.com/method/groups.isMember', params)
-            sleep(0.3)
-            result = response_friend_in_group.json()['response']
-            if result == 1:
-                print('Результат по другу {} в группе {}: {}. Осталось проверить друзей {}'.format(friend, group, result, len(friend_list) * len(group_list) - count))
-                result_list_1.add(group)
-                count += 1
-            elif result == 0:
-                print('Результат по другу {} в группе {}: {}. Осталось проверить друзей {}'.format(friend, group, result, len(friend_list) * len(group_list) - count))
-                result_list_0.add(group)
-                count += 1
+            while True:
+                params = get_params()
+                params['group_id'] = group
+                params['user_id'] = friend
+                try:
+                    response_friend_in_group = requests.get('https://api.vk.com/method/groups.isMember', params)
+                    sleep(0.2)
+                    result = response_friend_in_group.json()['response']
+                    if result == 1:
+                        print('Результат по другу {} в группе {}: {}. Осталось проверить друзей {}'.format(friend, group, result, len(friend_list) * len(group_list) - count))
+                        result_list_1.add(group)
+                        count += 1
+                    elif result == 0:
+                        print('Результат по другу {} в группе {}: {}. Осталось проверить друзей {}'.format(friend, group, result, len(friend_list) * len(group_list) - count))
+                        result_list_0.add(group)
+                        count += 1
+                except requests.exceptions.ReadTimeout:
+                    continue
+                except KeyError:
+                    result_error = response_friend_in_group.json()['error']['error_msg']
+                    print('Возникла ошибка: ', result_error)
+                    continue
+                break
         result_list = result_list_0.difference(result_list_1)
     return create_json_file(result_list)
 
@@ -102,16 +111,25 @@ def create_json_file(set_income):
     params = get_params()
     params['fields'] = 'members_count'
     for group in set_income:
-        params['group_id'] = group
-        print('Запрос информации по группе №{}'.format(group))
-        response_for_group_info = requests.get('https://api.vk.com/method/groups.getById', params)
-        sleep(0.3)
-        result_for_group_info = response_for_group_info.json()['response'][0]
-        group_dict = dict()
-        group_dict['name'] = result_for_group_info['name']
-        group_dict['gid'] = result_for_group_info['id']
-        group_dict['members_count'] = result_for_group_info['members_count']
-        json_list.append(group_dict)
+        while True:
+            params['group_id'] = group
+            print('Запрос информации по группе № {}'.format(group))
+            try:
+                response_for_group_info = requests.get('https://api.vk.com/method/groups.getById', params)
+                sleep(0.3)
+                result_for_group_info = response_for_group_info.json()['response'][0]
+                group_dict = dict()
+                group_dict['name'] = result_for_group_info['name']
+                group_dict['gid'] = result_for_group_info['id']
+                group_dict['members_count'] = result_for_group_info['members_count']
+                json_list.append(group_dict)
+            except requests.exceptions.ReadTimeout:
+                continue
+            except KeyError:
+                result_error = response_for_group_info.json()['error']['error_msg']
+                print('Возникла ошибка: ', result_error)
+                continue
+            break
     with open('groups.json', 'w', encoding='utf-8') as json_text:
         data = json_list
         json.dump(data, json_text, indent=2, ensure_ascii=False)  # сериализация записываемого файла
