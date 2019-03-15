@@ -13,9 +13,9 @@ def translate(file, text, lang_from, lang_to):
     text_parts = list()
     translated_text = list()
     x = 0
-    URL = 'https://translate.yandex.net/api/v1/tr.json/translate'
+    URL = 'https://translate.yandex.net/api/v1.5/tr.json/translate'
     params = {
-        'id': '0978ab23.5c7987d6.d6d55a19-7-0',
+        'key': 'trnsl.1.1.20161025T233221Z.47834a66fd7895d0.a95fd4bfde5c1794fa433453956bd261eae80152',
         'srv': 'tr-text',
         'lang': '{}-{}'.format(lang_from, lang_to),
         'reason': 'auto'
