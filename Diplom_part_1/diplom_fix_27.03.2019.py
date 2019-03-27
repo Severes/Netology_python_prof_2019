@@ -62,41 +62,53 @@ def get_user_friends_list(ids):
     return result_friends_list
 
 
+def split_friends(ids):
+    friends_list = get_user_friends_list(ids)
+    friends_in_500 = list()
+    while len(friends_list) > 500:
+        piece_500 = friends_list[:500]
+        friends_in_500.append(piece_500)
+        friends_list = friends_list[500:]
+    friends_in_500.append(friends_list)
+    return friends_in_500
+
 def check_for_friends_in_groups(ids):
     """
     :param ids: Имя пользователя Вконтакте или его id
     :return: Множество групп, в которых нет ни одного друга пользователя
     """
     group_list = get_group_list(ids)
-    friend_list = get_user_friends_list(ids)
+    friend_list_500 = split_friends(ids)
     result_list_1 = set()
     result_list_0 = set()
     result_list = set()
     count = int()
     for group in group_list:
-        while True:
-            params = get_params()
-            params['group_id'] = group
-            params['user_id'] = friend_list
-            try:
-                response_friend_in_group = requests.get('https://api.vk.com/method/groups.isMember', params)
-                sleep(0.2)
-                result = response_friend_in_group.json()['response']
-                if result == 1:
-                    print('Результат по другу {} в группе {}: {}. Осталось проверить друзей {}'.format(friend_list, group, result, len(friend_list) * len(group_list) - count))
-                    result_list_1.add(group)
-                    count += 1
-                elif result == 0:
-                    print('Результат по другу {} в группе {}: {}. Осталось проверить друзей {}'.format(friend_list, group, result, len(friend_list) * len(group_list) - count))
-                    result_list_0.add(group)
-                    count += 1
-            except requests.exceptions.ReadTimeout:
-                continue
-            except KeyError:
-                result_error = response_friend_in_group.json()['error']['error_msg']
-                print('Возникла ошибка: ', result_error)
-                continue
-            break
+        for friends_500 in friend_list_500:
+            while True:
+                params = get_params()
+                params['group_id'] = group
+                params['user_ids'] = ', '.join(str(fr) for fr in friends_500)
+                try:
+                    response_friend_in_group = requests.get('https://api.vk.com/method/groups.isMember', params)
+                    sleep(0.2)
+                    result = response_friend_in_group.json()['response']
+                    for result_dict in result:
+                        if result_dict['member'] == 1:
+                            print('Результат по другу {} в группе {}: {}. Осталось проверить друзей {}'.format(result_dict['user_id'], group, result_dict['member'], len(friends_500) * len(group_list) - count))
+                            result_list_1.add(group)
+                            count += 1
+                        elif result_dict['member'] == 0:
+                            print('Результат по другу {} в группе {}: {}. Осталось проверить друзей {}'.format(result_dict['user_id'], group, result_dict['member'], len(friends_500) * len(group_list) - count))
+                            result_list_0.add(group)
+                            count += 1
+                except requests.exceptions.ReadTimeout:
+                    continue
+                except KeyError:
+                    result_error = response_friend_in_group.json()['error']['error_msg']
+                    print('Возникла ошибка: ', result_error)
+                    continue
+                break
         result_list = result_list_0.difference(result_list_1)
     return create_json_file(result_list)
 
@@ -137,4 +149,4 @@ def create_json_file(set_income):
     return some_text
 
 
-print(check_for_friends_in_groups('v.simigin'))
+print(check_for_friends_in_groups('eshmargunov'))
