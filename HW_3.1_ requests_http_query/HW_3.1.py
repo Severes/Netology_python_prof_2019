@@ -15,7 +15,7 @@ def translate(file, text, lang_from, lang_to):
     x = 0
     URL = 'https://translate.yandex.net/api/v1.5/tr.json/translate'
     params = {
-        'key': 'trnsl.1.1.20161025T233221Z.47834a66fd7895d0.a95fd4bfde5c1794fa433453956bd261eae80152',
+        'key': 'trnsl.1.1. Import. Module. Package.20161025T233221Z.47834a66fd7895d0.a95fd4bfde5c1794fa433453956bd261eae80152',
         'srv': 'tr-text',
         'lang': '{}-{}'.format(lang_from, lang_to),
         'reason': 'auto'
