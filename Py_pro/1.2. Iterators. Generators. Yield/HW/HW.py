@@ -1,5 +1,4 @@
 import json
-import chardet
 import os
 from hashlib import md5
 
