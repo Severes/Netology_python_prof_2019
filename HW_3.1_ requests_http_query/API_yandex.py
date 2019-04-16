@@ -15,6 +15,12 @@ payload = {
 }
 
 res = requests.post(URL, params=params, data=payload)
-
+print(dir(res))
+print(res.json())
+print(res.text)
+print(res.raw)
+print('res',res.content)
 print(res.status_code)
 print(res.json())
+print(('--------'))
+# print(res.__init__())
