@@ -56,11 +56,6 @@ def add_students(course_id, students):
     with pg.connect('dbname=netology_db user=netology_user password=user') as conn:
         with conn.cursor() as cur:
             for student in students:
-                # print(student)
-                # print(student['name'])
-                # print(student['birth'])
-                # print(type(student))
-                # print(students)
                 cur.execute("""
                 insert into student (name, birth) values (%s, %s)
                 """, (student['name'], student['birth']))
