@@ -22,6 +22,7 @@ def path_logger_func(path):
         return new_func
     return logger
 
+
 @path_logger_func('log.txt')
 def json_ten(file):
     # Открываем файл и считываем весь текст построчно, попутно вычисляя кодировку
