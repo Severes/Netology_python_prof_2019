@@ -30,9 +30,35 @@ def foo(*args, **kwargs):
 import datetime
 import time
 
-#Декоратор, который показывает времяработы функции.
-def parametrized(multiplier):
+def bench(old_func):
+    count = 1
+    def new_func(*args, **kwargs):
+        nonlocal count
+        start = datetime.datetime.now()
+        ret = old_func(*args, **kwargs)
+        end = datetime.datetime.now()
+        print(f'{old_func.__name__}: {end-start} {count}')
+        count += 1
+        return ret
+    return new_func
 
+@bench
+def foo(x):
+    time.sleep(x)
+
+# foo(3)
+# foo(4)
+# foo(5)
+
+
+#Декоратор, который показывает времяработы функции.
+
+
+def formatdata(timedelta):
+    return f'{timedelta.seconds, timedelta.microseconds}'
+
+
+def parametrized(func):
 
     def bench(old_func):
         result = []
@@ -41,32 +67,57 @@ def parametrized(multiplier):
             ret = old_func(*args,**kwargs)
             end = datetime.datetime.now()
             res = end-start
-            res = f'сек{res.seconds}'
-            res = multiplier*res
+            # res = f'сек{res.seconds}'
+            res = func(res)
             print(f'{old_func.__name__}: {res}')
             result.append(end-start)
-            print(result)
+            # print(result)
             return ret
         return new_func
     return bench
+
 #Функция
-@parametrized(2)
+@parametrized(formatdata)
 def foo(x):
     time.sleep(x)
 
+# foo(2)
+# foo(2)
+# foo(2)
+
+import contextlib
+import functools
+class User:
+    def __init__(self, uid):
+        self.uid = uid
 
 
-foo(2)
-foo(2)
-foo(2)
 
-# Параметризованный дерокатор
+    @staticmethod
+    def static():
+        print(self)
 
-# def multiply(multiplier):
-#     summ = 0
-#     count = 0
-#     def decorator
+    @classmethod
+    def cmethod(cls, *uids):
+        return [User(uid) for uid in uids]
 
-# tdata = datetime.datetime.now()
-# tdata.strftime('%Y')
-# print(tdata)
+    @property
+    def _uid(self):
+        return self.uid
+
+user = User(10)
+
+# print(user._uid)
+
+
+def foo():
+    """
+    I am docstring
+    """
+
+def decor(old_func):
+    @functools
+    def new_func():
+        x = old_func()
+        return x
+    return new_func
