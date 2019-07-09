@@ -1,31 +1,45 @@
-from pprint import pprint
-# читаем адресную книгу в формате CSV в список contacts_list
-import csv
 import re
-with open("phonebook_raw.csv", encoding='utf-8') as f:
+from pprint import pprint
+import csv
+
+with open("phonebook_raw.csv", encoding='utf8') as f:
   rows = csv.reader(f, delimiter=",")
   contacts_list = list(rows)
-# pprint(contacts_list[1])
+# pprint(contacts_list)
 
-text = """lastname,firstname,surname,organization,position,phone,email
-Усольцев Олег Валентинович,,,ФНС,главный специалист – эксперт отдела взаимодействия с федеральными органами власти Управления налогообложения имущества и доходов физических лиц,+7 (495) 913-04-78,opendata@nalog.ru
-Мартиняхин Виталий Геннадьевич,,,ФНС,,+74959130037,
-Наркаев,Вячеслав Рифхатович,,ФНС,,8 495-913-0168,
-Мартиняхин,Виталий,Геннадьевич,ФНС,cоветник отдела Интернет проектов Управления информационных технологий,,,
-Лукина Ольга Владимировна,,,Минфин,,+7 (495) 983-36-99 доб. 2926,Olga.Lukina@minfin.ru
-Паньшин Алексей Владимирович,,,Минфин,,8(495)748-49-73,1248@minfin.ru
-Лагунцов Иван Алексеевич,,,Минфин,,+7 (495) 913-11-11 (доб. 0792),
-Лагунцов Иван,,,,,,Ivan.Laguntcov@minfin.ru"""
 # TODO 1: выполните пункты 1-3 ДЗ
-# 1
-# pattern = re.compile('(\+7|8)?[\s]*\((\d+)\)\s*(\d+)[\s-]*(\d+)[\s-]*(\d+)')
-fio = re.compile('([А-ЯЁ][а-яё]+)')
-result = re.sub(fio, r'\1,', text)
-pprint(result)
-# pprint(result)
+# Переменные
+patterns = [
+    ['^(\w+)( |,)(\w+)( |,)(\w+|),(,+|)(,,,|[А-Яа-я]+)', r'\1,\3,\5,\7'],
+    ['(\+7|8)\s*(\(|)(\d{3})[\s\)-]*(\d{3})\-*(\d{2})\-*(\d{2})', r'+7(\3)\4-\5-\6'],
+    ['\(?доб\.\s(\d{4})\)*', r'доб.\1']
+    ]
+correct_list = []
+del_str = []
+contacts_list_str = []
+
+for elem in contacts_list:
+    elem2 = ','.join(elem)
+    contacts_list_str.append(elem2)
+
+for contact in contacts_list_str:
+    for pattern in patterns:
+        find = re.findall(pattern[0], contact)
+        contact = re.sub(pattern[0], pattern[1], contact)
+    correct_list.append(contact.split(','))
+
+for i in range(1, len(correct_list) - 1):
+    for m in range(i + 1, len(correct_list)):
+        if correct_list[i][0] == correct_list[m][0]:
+            for k in range(7):
+                if correct_list[i][k] == '':
+                    correct_list[i][k] = correct_list[m][k]
+            del_str.append(correct_list[m])
+
+for d in del_str:
+    correct_list.remove(d)
+
 # TODO 2: сохраните получившиеся данные в другой файл
-# код для записи файла в формате CSV
-# with open("phonebook.csv", "w") as f:
-#   datawriter = csv.writer(f, delimiter=',')
-#   # Вместо contacts_list подставьте свой список
-#   datawriter.writerows(contacts_list)
+with open("phonebook.csv", "w", encoding='utf8') as f:
+    datawriter = csv.writer(f, delimiter=',')
+    datawriter.writerows(correct_list)
