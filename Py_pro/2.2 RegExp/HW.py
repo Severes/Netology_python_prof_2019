@@ -14,6 +14,7 @@ patterns = [
     ['(\+7|8)\s*(\(|)(\d{3})[\s\)-]*(\d{3})\-*(\d{2})\-*(\d{2})', r'+7(\3)\4-\5-\6'],
     ['\(?доб\.\s(\d{4})\)*', r'доб.\1']
     ]
+
 correct_list = []
 del_str = []
 contacts_list_str = []
@@ -24,7 +25,6 @@ for elem in contacts_list:
 
 for contact in contacts_list_str:
     for pattern in patterns:
-        find = re.findall(pattern[0], contact)
         contact = re.sub(pattern[0], pattern[1], contact)
     correct_list.append(contact.split(','))
 
