@@ -1,32 +1,15 @@
 import requests
-import psycopg2
 import re
-import json
 import datetime
+import psycopg2 as pg
 from time import sleep
 from urllib.parse import urlencode
 from pprint import pprint
+import json
 
-# TODO: Что делаем
-#  1. Делаем класс - пользователь
-#  2. Собираем критерии из аккаунта пользователя:
-#   Возраст
-#   Пол
-#   Группы
-#   Расположение - город
-#   Интересы
-#   Доп. критерий - отношение к курению
-#  3. Проставить вес критериев из шага 2
-#  4. Разбирать критерий "Интересы" неоходимо регулярным выражением
-#  5. Возвращаем id пользователей, подошедших под условия вместе с тремя фотографиями аватара
-
-# TODO: Требования к программе:
-#  1. Нужно получать токен с правами пользователя
-#  2. Декомпозиция
-#  3. Результат, то есть соответствие пользователей заисывать в БД
-#  4. Не должно быть повторений при повторном поиске
-#  5. Реализовать тесты на первые запросы. - УТОЧНИТЬ
-
+# TODO: Остановился на функции get_3_profile_photos.
+#       Нужно сформировать json с тремя фотками.
+#       Отфильтровать фотки по количеству лайков
 
 # Запрос токена
 def get_access_token(user_id):
@@ -47,6 +30,44 @@ def get_access_token(user_id):
     result = print('?'.join((oauth_url, urlencode(auth_data))))
     return result
 
+# Работа с БД
+def create_db():
+    """
+    Создает таблицу, если ее еще нет в БД
+    """
+    with pg.connect('dbname=netology_db user=netology_user password=user') as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+            create table if not exists profile (
+                id serial primary key,
+                profile_id integer not null
+            ) 
+             """)
+            print('База данных и таблицы созданы')
+
+def pg_db_connect(option,users_list=None):
+    """
+    :param option: Режим вызова функции.
+        insert - вставка значений в БД
+        check - проверка наличия значенияв БД
+    :param users_list: Список пользователей для проверки/вставки
+    :return: возвращает список пользователей из БД
+    """
+    with pg.connect('dbname=netology_db user=netology_user password=user') as conn:
+        if option == 'insert':
+            with conn.cursor() as cur:
+                for user in users_list:
+                    cur.execute("""
+                    insert into profile (profile_id) values (%s)
+                    """, (user,))
+        elif option == 'check':
+            with conn.cursor() as cur:
+                cur.execute("""
+                select profile_id from profile;
+                """)
+                result = cur.fetchall()
+            return result
+
 # TOKEN
 token = '7f4c79e6f0116ddb437929100ac36076f91b6a5bab3daa5a01ddea01efa3bc11527c22ed9afde8861f54a'
 
@@ -64,10 +85,19 @@ class User:
         params = self.get_params()
         params['user_ids'] = self.user_id
         params['fields'] = 'domain'
-        response_users_get = requests.get('https://api.vk.com/method/users.get', params)
-        result_users_get = response_users_get.json()['response'][0]['domain']
-        link = 'https://vk.com/' + result_users_get
-        return link
+        while True:
+            try:
+                response_users_get = requests.get('https://api.vk.com/method/users.get', params)
+                result_users_get = response_users_get.json()['response'][0]['domain']
+                sleep(0.25)
+                link = 'https://vk.com/' + result_users_get
+                return link
+            except requests.exceptions.ReadTimeout:
+                continue
+            except KeyError:
+                result_error = response_users_get.json()['error']['error_msg']
+                print(result_error)
+                continue
 
     def get_params(self):
         return {
@@ -86,7 +116,6 @@ class User:
 
     def get_group_list(self):
         """
-        :param ids: Имя пользователя Вконтакте или его id
         :return: Список ID всех групп пользователя
         """
         params = self.get_params()
@@ -137,7 +166,7 @@ class User:
         :return: Возвращает параметры пользователя:
             Пол - sex
             Возраст - bdate
-            Группы - нужно зарпашивать через отлельную функцию - get_group_list()
+            Группы - group_id. Нужно зарпашивать через отлельную функцию - get_group_list()
             Расположение - город - city
             Cемейное положение - relation
         """
@@ -189,15 +218,30 @@ class User:
             break
         return result
 
+    def get_3_profile_photos(self, profile_list):
+        params = self.get_params()
+        params['album_id'] = 'profile'
+        params['extended'] = 1
+        for profile in profile_list:
+            params['owner_id'] = profile
+            response_profile_photos = requests.get('https://api.vk.com/method/photos.get', params)
+            result = response_profile_photos.json()['response']['items']
+            for item in result:
+                # print(item['sizes'][-1])
+                print(item['likes']['count'])
+        # pprint(result)
+
     def get_pair_user_lists(self):
         """
         Основная функция
         :return: Возвращает список пользователей с совпадениями по характеристикам основного пользователя
         """
+        # Получаю список параметров пользователя, чтобы по ним искать профили-пар
         user_params = self.get_user_parameters()
         user_dict = dict()
         user_interests = user_params.get('interests')
         param = ['sex', 'group_id', 'city', 'birth_year', 'relation']
+        # Удаляю из списка параметров главного пользователя интересы, потому что не знаю, как по ним итерироваться
         del(user_params['interests'])
         pair_user_list = list()
         first_ten_users = list()
@@ -206,7 +250,7 @@ class User:
                 print(key)
                 params = self.get_params()
                 params['count'] = 1000
-                for item in value:
+                for item in value[:2]:
                     params[key] = item
                     while True:
                         try:
@@ -218,7 +262,6 @@ class User:
                                     user_dict[item['id']] += key
                                 else:
                                     user_dict[item['id']] = key
-                            # print(len(user_dict))
                         except requests.exceptions.ReadTimeout:
                             continue
                         except KeyError:
@@ -244,7 +287,6 @@ class User:
                                 user_dict[item['id']] += key
                             else:
                                 user_dict[item['id']] = key
-                        # print(len(user_dict))
                     except requests.exceptions.ReadTimeout:
                         continue
                     except KeyError:
@@ -267,7 +309,6 @@ class User:
                                 user_dict[item['id']] += key
                             else:
                                 user_dict[item['id']] = key
-                        # print(len(user_dict))
                     except requests.exceptions.ReadTimeout:
                         continue
                     except KeyError:
@@ -276,134 +317,41 @@ class User:
                         continue
                     break
         # # Часть с проверкой по интересам пользователей
-        # for pair_user in pair_user_list:
-        #     count = 0
-        #     pair_user_interests = self.get_pair_user_parameters(pair_user)
-        #     for interest in user_interests:
-        #         if interest in pair_user_interests:
-        #             count += 1
-        #             print('Совпадение!')
-        #     if count < 1:
-        #         pair_user_list.remove(pair_user)
+            # for pair_user in pair_user_list:
+            #     count = 0
+            #     pair_user_interests = self.get_pair_user_parameters(pair_user)
+            #     for interest in user_interests:
+            #         if interest in pair_user_interests:
+            #             count += 1
+            #             print('Совпадение!')
+            #     if count < 1:
+            #         pair_user_list.remove(pair_user)
         # # Часть с проверкой по интересам пользователей
         # Добавляем id тобранных пользователей в список.
-        # От веса параметра зависит количество добавений польщователя в список
         for key, value in user_dict.items():
             for p in param:
                 if p in value:
                     pair_user_list.append(key)
         pair_user_list = sorted(pair_user_list, key=lambda x: pair_user_list.count(x), reverse=True)
+        # Создаем таблицу для профилей
+        create_db()
+        # Формируем список из 10 уникальных профилей
         for user in pair_user_list:
+            # проверяем наличие профиля в базе
+            if (user,) in pg_db_connect('check'):
+                continue
+            # если список еще не больше 10, то добавляем его в список уникальных
             if len(first_ten_users) < 10:
                 if user not in first_ten_users:
                     first_ten_users.append(user)
             else:
                 break
+        # Выводим значений отобранных профилей
         for item in first_ten_users:
-            sleep(0.2)
-            print(User(item))
-        return first_ten_users
-
-    def filter_users_to_get_pairs(self):
-        """
-        Фильтрует список пользователей через каждый отдельный ОБЩИЙ параметр информации о пользователе:
-        В порядке убывания в списке параметров, убывает и вес параметра
-        1. Общие группы
-        2. Общие интересы
-        3. Противоположниый пол (если не задано иное значение)
-        4. Одинаковый возраст (если не задано иное значение)
-        5. Одинаковый город (если не задано иное значение)
-        6. Одинаковое семейное положение (если не задано иное значение)
-        :return: итоговый список пользователей, имеющие максимально общие параметры с главным пользователем
-        """
-        main_user_dict = self.get_user_parameters()
-        print('dict', main_user_dict['groups'])
-        pair_users_ids = list()
-        for key, value in main_user_dict.items():
-            print(key)
-            if key == 'groups':
-                pair_users_ids = self.check_pair_users_in_groups_search(value)
-                print(key, pair_users_ids)
-            if key == 'interests':
-                for elem in value:
-                    print(elem)
-                    print(value)
-                    for user_ids in pair_users_ids:
-                        user_interests = self.get_pair_user_parameters(user_ids, key)
-                        if value not in user_interests:
-                            pair_users_ids.remove(user_ids)
-                print(key, pair_users_ids)
-            if key in ('sex', 'relation'):
-                    for user_ids in pair_users_ids:
-                        user_sex_relation = self.get_pair_user_parameters(user_ids, key)
-                        if value != user_sex_relation:
-                            pair_users_ids.remove(user_ids)
-                    print(key, pair_users_ids)
-            if key == 'bdate':
-                value = value.split('.')
-                for user_ids in pair_users_ids:
-                    user_bdate = self.get_pair_user_parameters(user_ids, 'birth_year')
-                    if value[2] != user_bdate:
-                        pair_users_ids.remove(user_ids)
-                print('birth_year', pair_users_ids)
-            if key == 'city':
-                for user_ids in pair_users_ids:
-                    user_city = self.get_pair_user_parameters(user_ids, key)
-                    if value['id'] != user_city:
-                        pair_users_ids.remove(user_ids)
-                print(key, pair_users_ids)
-        return pair_users_ids
-
-    def filter_users_to_get_pairs_2(self):
-        """
-        Фильтрует список пользователей через каждый отдельный ОБЩИЙ параметр информации о пользователе:
-        В порядке убывания в списке параметров, убывает и вес параметра
-        1. Общие группы
-        2. Общие интересы
-        3. Противоположниый пол (если не задано иное значение)
-        4. Одинаковый возраст (если не задано иное значение)
-        5. Одинаковый город (если не задано иное значение)
-        6. Одинаковое семейное положение (если не задано иное значение)
-        :return: итоговый список пользователей, имеющие максимально общие параметры с главным пользователем
-        """
-        main_user_dict = self.get_user_parameters()
-        pair_users_ids = self.check_pair_users_in_groups_search(main_user_dict['groups'], 5)
-
-        sex_list = list()
-        print('groups', pair_users_ids)
-        print('interests', pair_users_ids)
-        for user_ids in pair_users_ids:
-            user_sex = self.get_pair_user_parameters(user_ids, 'sex')
-            if main_user_dict['sex'] == user_sex or user_sex is None:
-                print(main_user_dict['sex'], user_sex)
-                print('равен')
-                for elem in pair_users_ids:
-                    if elem == user_ids:
-                        pair_users_ids.remove(user_ids)
-            else:
-                sex_list.append(user_ids)
-                print(main_user_dict['sex'], user_sex)
-                print('не равен')
-        print(sex_list)
-        print('sex', pair_users_ids)
-        for user_ids in pair_users_ids:
-            user_relation = self.get_pair_user_parameters(user_ids, 'relation')
-            if main_user_dict['relation'] != user_relation:
-                pair_users_ids.remove(user_ids)
-        print('relation', pair_users_ids)
-        for user_ids in pair_users_ids:
-            user_bdate = self.get_pair_user_parameters(user_ids, 'birth_year')
-            if main_user_dict['bdate'][2] != user_bdate:
-                pair_users_ids.remove(user_ids)
-        print('birth_year', pair_users_ids)
-        for user_ids in pair_users_ids:
-            user_city = self.get_pair_user_parameters(user_ids, 'city')
-            if main_user_dict['city']['id'] != user_city:
-                pair_users_ids.remove(user_ids)
-        print('city', pair_users_ids)
-        return pair_users_ids
-
-
+            print(f'{User(item)}. Количество совпадений - {pair_user_list.count(item)}. id - {item}')
+        # Добавляем 10 отобранных профилей в базу данных
+        pg_db_connect('insert', first_ten_users)
+        return
 
 
 
@@ -415,6 +363,7 @@ class User:
 
 user = User(80619823)
 
-pprint(User.get_pair_user_lists(user))
+# pprint(User.get_pair_user_lists(user))
 
 # pprint(User.get_pair_user_parameters(user, '80619823, 72643786'))
+User.get_3_profile_photos(user, [80619823])
