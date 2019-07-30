@@ -5,6 +5,7 @@ import psycopg2 as pg
 from time import sleep
 from urllib.parse import urlencode
 from pprint import pprint
+from operator import itemgetter
 import json
 
 # TODO: Остановился на функции get_3_profile_photos.
@@ -219,17 +220,43 @@ class User:
         return result
 
     def get_3_profile_photos(self, profile_list):
+        """
+        Собирает 3 топовых фотографии по списку пользователей и выдает итоговый JSON
+        :param profile_list: Список пользователей
+        :return: JSON с ссылкой напрофиль и 3 топ фото
+        """
+        profile_photo_list = list()
+        final_profile_list = list()
         params = self.get_params()
         params['album_id'] = 'profile'
         params['extended'] = 1
         for profile in profile_list:
-            params['owner_id'] = profile
-            response_profile_photos = requests.get('https://api.vk.com/method/photos.get', params)
-            result = response_profile_photos.json()['response']['items']
-            for item in result:
-                # print(item['sizes'][-1])
-                print(item['likes']['count'])
-        # pprint(result)
+            while True:
+                try:
+                    print(f'Сбор фотографий по пользователю {User(profile)}')
+                    final_profile_dict = dict()
+                    params['owner_id'] = profile
+                    response_profile_photos = requests.get('https://api.vk.com/method/photos.get', params)
+                    result = response_profile_photos.json()['response']['items']
+                    for item in result:
+                        profile_dict = dict()
+                        profile_dict['profile_id'] = item['owner_id']
+                        profile_dict['photo'] = item['sizes'][-1]['url']
+                        profile_dict['likes'] = item['likes']['count']
+                        profile_photo_list.append(profile_dict)
+                        profile_photo_list = sorted(profile_photo_list, key=itemgetter('likes'), reverse=True)
+                    final_profile_dict['id'] = str((User(profile)))
+                    final_profile_dict['photo_1'] = profile_photo_list[0]['photo']
+                    final_profile_dict['photo_2'] = profile_photo_list[1]['photo']
+                    final_profile_dict['photo_3'] = profile_photo_list[2]['photo']
+                    final_profile_list.append(final_profile_dict)
+                except KeyError:
+                    result_error = response_profile_photos.json()['error']['error_msg']
+                    print(result_error)
+                    continue
+                break
+        json_text = print(json.dumps(final_profile_list, indent=2, ensure_ascii=False))
+        return json_text
 
     def get_pair_user_lists(self):
         """
@@ -245,9 +272,10 @@ class User:
         del(user_params['interests'])
         pair_user_list = list()
         first_ten_users = list()
+        print('Поиск пользователей по параметрам:')
         for key, value in user_params.items():
             if key == 'group_id':
-                print(key)
+                print('Группы')
                 params = self.get_params()
                 params['count'] = 1000
                 for item in value[:2]:
@@ -272,7 +300,7 @@ class User:
             elif key == 'sex':
                 params = self.get_params()
                 params['count'] = 1000
-                print(key)
+                print('Пол')
                 if value == 1:
                     params['sex'] = 2
                 elif value == 2:
@@ -298,7 +326,12 @@ class User:
                 params = self.get_params()
                 params['count'] = 1000
                 params[key] = value
-                print(key)
+                if key == 'relation':
+                    print('Семейное положение')
+                elif key == 'birth_year':
+                    print('Год рождения')
+                elif key =='city':
+                    print('Город')
                 while True:
                     try:
                         response = requests.get('https://api.vk.com/method/users.search', params)
@@ -335,6 +368,7 @@ class User:
         pair_user_list = sorted(pair_user_list, key=lambda x: pair_user_list.count(x), reverse=True)
         # Создаем таблицу для профилей
         create_db()
+        print('Проверяем наличие профилей в базе данных')
         # Формируем список из 10 уникальных профилей
         for user in pair_user_list:
             # проверяем наличие профиля в базе
@@ -347,12 +381,23 @@ class User:
             else:
                 break
         # Выводим значений отобранных профилей
+        print('Количество совпадений параметров с главным профилем поользователя:')
         for item in first_ten_users:
             print(f'{User(item)}. Количество совпадений - {pair_user_list.count(item)}. id - {item}')
         # Добавляем 10 отобранных профилей в базу данных
         pg_db_connect('insert', first_ten_users)
-        return
+        # print(f'10 пользаков {first_ten_users[:1]}')
+        next_func = self.get_3_profile_photos(first_ten_users)
+        return next_func
 
+
+        #
+        # with open('profile_list.json', 'w', encoding='utf-8') as json_text:
+        #     data = profile_photo_list[:3]
+        #     json.dump(data, json_text, indent=2, ensure_ascii=False)
+        #     some_text = json.dumps(data, indent=2, ensure_ascii=False)
+        # return some_text
+        # return  pprint(json_list)
 
 
 # Запрашиваем токен
@@ -363,7 +408,7 @@ class User:
 
 user = User(80619823)
 
-# pprint(User.get_pair_user_lists(user))
+pprint(User.get_pair_user_lists(user))
 
 # pprint(User.get_pair_user_parameters(user, '80619823, 72643786'))
-User.get_3_profile_photos(user, [80619823])
+# User.get_3_profile_photos(user, [80619823])
