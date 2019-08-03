@@ -38,10 +38,13 @@ def landing(request):
 
 def stats(request):
     try:
-        test = counter_click['test']/counter_show['test']
-        original = counter_click['original']/counter_show['original']
+        test = counter_click['test'] / counter_show['test']
     except ZeroDivisionError:
         test = 0
+
+    try:
+        original = counter_click['original']/counter_show['original']
+    except ZeroDivisionError:
         original = 0
 
     context = {
