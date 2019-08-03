@@ -37,9 +37,16 @@ def landing(request):
 
 
 def stats(request):
+    try:
+        test = counter_click['test']/counter_show['test']
+        original = counter_click['original']/counter_show['original']
+    except ZeroDivisionError:
+        test = 0
+        original = 0
+
     context = {
-        'test_conversion': counter_click['test']/counter_show['test'],
-        'original_conversion': counter_click['original']/counter_show['original']
+        'test_conversion': test,
+        'original_conversion': original
     }
     # Реализуйте логику подсчета отношения количества переходов к количеству показов страницы
     # Чтобы отличить с какой версии лендинга был переход

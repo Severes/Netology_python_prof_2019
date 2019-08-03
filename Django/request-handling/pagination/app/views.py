@@ -29,11 +29,11 @@ def bus_stations(request):
         'current_page': page,
     }
 
-    if page > 1:
+    if page_stations.has_previous():
         context['prev_page_url'] = 'bus_stations?' + urlencode({'page': page - 1})
     else:
         context['prev_page_url'] = None
-    if page != paginator.count:
+    if page_stations.has_next():
         context['next_page_url'] = 'bus_stations?' + urlencode(({'page': page + 1}))
     else:
         context['next_page_url'] = None
