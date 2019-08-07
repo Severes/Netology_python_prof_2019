@@ -1,4 +1,6 @@
-<!DOCTYPE html>{% load static %}
+<!DOCTYPE html>
+{% load static %}
+{% load new_filters %}
 <html>
   <head>
     <meta charset="UTF-8">
@@ -15,10 +17,38 @@
   <body>
     {% block content %}
       <div class="row">
-        <h1 class="col s12">Инфляция в России</h1>
+        <table>
+          <caption><h1 class="col s12">Инфляция в России</h1></caption>
+          <tr>
+            {% for head in header %}
+            <th>{{ head }}</th>
+            {% endfor %}
+          </tr>
+            {% for row in table %}
+            <tr>
+              {% for r in row %}
+                {% if forloop.first %}
+                  <th>{{ r }}</th>
+                {% elif forloop.last %}
+                  <th style="background-color: grey;">{{ r }}</th>
+                {% elif r|val_int < 0 %}
+                  <th style="background-color: green;">{{ r }}</th>
+                {% elif r|val_int > 1 and r|val_int < 2 %}
+                  <th style="background-color: #F8E0E0;">{{ r }}</th>
+                {% elif r|val_int >= 2 and r|val_int < 5 %}
+                  <th style="background-color: #F78181;">{{ r }}
+                {% elif r|val_int > 5 %}
+                  <th style="background-color: #FF0000;">{{ r }}</th>
+                {% elif r == '' %}
+                  <th> - </th>
+                {% else %}
+                  <th>{{ r }}</th>
+                {% endif %}
+              {% endfor %}
+            </tr>
+            {% endfor %}
+        </table>
         <div class="col s12 m8">
-        
-        <!-- Ваша логика -->
 
         </div>
       </div>
