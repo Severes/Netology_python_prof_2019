@@ -1,6 +1,7 @@
 from django import template
 import datetime
 import time
+import re
 
 
 register = template.Library()
@@ -45,14 +46,16 @@ def format_num_comments(value):
     return result
 
 @register.filter
-def format_selftext(count, value):
-    """
-    Оставляет count первых и count последних слов, между ними должно быть троеточие.
-    count задается параметром фильтра.
-    Пример c count = 5: "Hi all sorry if this ... help or advice greatly appreciated."
-    Знаки препинания остаются, обрезаются только слова.
-    """
-    pass
+def format_selftext(value, count):
+    split_list = re.findall('(\S+)', value)
+    if len(split_list) > count*2:
+        left_part = ' '.join(split_list[:count])
+        right_part = ' '.join(split_list[-count:])
+        center_str = '...'
+        result = f'{left_part} {center_str} {right_part}'
+    else:
+        result = value
+    return result
 
 
 
