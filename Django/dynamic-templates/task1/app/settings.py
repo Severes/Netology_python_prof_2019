@@ -105,6 +105,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
+INFLATION_FILES = os.path.join(BASE_DIR, 'files')
+
 STATIC_URL = '/static/'
 
 SECRET_KEY = 'put your secret here'
